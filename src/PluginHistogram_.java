@@ -8,7 +8,7 @@ public class PluginHistogram_ implements PlugIn {
 	private GenericDialog gui;
 	private ImagePlus image;
 	private ImageProcessor processor;
-	private double amin, amax;
+	private int alow, ahigh;
 	private final String[] methods = {"expansion","equalization"};
 
 	
@@ -50,7 +50,7 @@ public class PluginHistogram_ implements PlugIn {
 	
 	private void equalizeHistrogram() {		
 		int width = image.getWidth(), height = image.getHeight(), pixelValue, newPixelValue;		
-		setAMinAMax();
+		setAHighALow();
 		ImgToExpand histData = new ImgToExpand(width, height);
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
@@ -58,7 +58,7 @@ public class PluginHistogram_ implements PlugIn {
 				histData.addPixel(pixelValue);				
 			}
 		}		
-		histData.finishCalculation(amax);		
+		histData.finishCalculation(ahigh);		
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
 				pixelValue = processor.getPixel(x, y);
@@ -75,34 +75,44 @@ public class PluginHistogram_ implements PlugIn {
 
 	private void expandHistrogram() {
 		int width = image.getWidth(), height = image.getHeight(), pixelValue;
-		double alow = 0d, ahigh = 255d, newPixelValue;
-		setAMinAMax();
+		int amin = 0, amax = 255;
+		setAHighALow();
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
 				pixelValue = processor.getPixel(x, y);
-				newPixelValue = amin + ((double) pixelValue - alow)*(amax-amin)/(ahigh-alow);		
-				processor.putPixel(x, y, (int) newPixelValue);
+				pixelValue = pixelValidation((int) (amin + (pixelValue - alow)*(amax-amin)/(ahigh-alow)));		
+				processor.putPixel(x, y, pixelValue);
 			}
 		}
 		image.updateAndDraw();
 		IJ.run(image, "Histogram", "");	
 	}	
 	
-	private void setAMinAMax() {
+	private void setAHighALow() {
 		int width = image.getWidth(), height = image.getHeight(),  pixelValue;
-		amin = 255d;
-		amax = 0d;
+		alow = 255;
+		ahigh = 0;
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
 				pixelValue = processor.getPixel(x, y);				
-				if (amax < pixelValue && pixelValue <= 255) {
-					amax = (double) pixelValue;
+				if (ahigh < pixelValue && pixelValue <= 255) {
+					ahigh = pixelValue;
 				}
-				if (amin > pixelValue && pixelValue >= 0 ) {
-					amin = (double) pixelValue;
+				if (alow > pixelValue && pixelValue >= 0 ) {
+					alow = pixelValue;
 				}
 			}								
 		}		
+	}
+	
+	private int pixelValidation(int pixel) {
+		if (pixel > 255) {
+			return 255;
+		}
+		else if (pixel < 0) {
+			return 0;
+		}
+		else return pixel;
 	}
 }
 	
